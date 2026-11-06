@@ -1,0 +1,73 @@
+package com.example.data
+
+data class Channel(
+    val id: String,
+    val name: String,
+    val streamUrl: String,
+    val logoUrl: String?,
+    val groupTitle: String,
+    val isFavorite: Boolean = false
+) {
+    val displayCategory: String
+        get() {
+            val raw = groupTitle.trim()
+            return when {
+                raw.isBlank() || raw.equals("Undefined", ignoreCase = true) -> "General"
+                raw.equals("Animation;Kids", ignoreCase = true) ||
+                raw.equals("Kids;Animation", ignoreCase = true) ||
+                (raw.contains("Animation", ignoreCase = true) && raw.contains("Kids", ignoreCase = true)) ||
+                raw.equals("Animation", ignoreCase = true) -> "Kids"
+                else -> raw
+            }
+        }
+}
+
+object BlacklistConfig {
+    private val blacklistedPatterns = listOf(
+        "mazhavilmanoramahd",
+        "anandtv",
+        "asianetmiddleeast",
+        "cmalayalamtv",
+        "didiktvkpm",
+        "garshomtv",
+        "goodnesstv",
+        "harvesttv",
+        "kairaliarabia",
+        "kalikatv",
+        "mewatchlive1",
+        "mta7asia",
+        "nickelodeonindia",
+        "nickelodeon",
+        "ntv7",
+        "rtmparlimendewannegara",
+        "rtmparlimendewanrakyat",
+        "pogo",
+        "pottadivine",
+        "selangortv",
+        "tuningshalomamerica",
+        "shekinahtv",
+        "sonic",
+        "sonysportsten1",
+        "sonysportsten2",
+        "sonysportsten3",
+        "sonysportsten5",
+        "visionindia",
+        "starsports1",
+        "starsports3",
+        "sttarsports3",
+        "starsportsselect1",
+        "starsportsselect"
+    )
+
+    fun isBlacklisted(channelName: String): Boolean {
+        val normalized = normalize(channelName)
+        if (normalized.isBlank()) return false
+        return blacklistedPatterns.any { pattern ->
+            normalized == pattern || normalized.contains(pattern) || pattern.contains(normalized)
+        }
+    }
+
+    private fun normalize(input: String): String {
+        return input.lowercase().replace(Regex("[^a-z0-9]"), "")
+    }
+}

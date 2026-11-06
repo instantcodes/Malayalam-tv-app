@@ -1,0 +1,31 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="AsianetNews.in" tvg-name="Asianet News" tvg-logo="https://i.imgur.com/8Q6WqgA.png" group-title="News",Asianet News
+https://y5w8j4a9.ssl.hwcdn.net/asianetlive/tracks-v1a1/mono.m3u8
+#EXTINF:-1 tvg-id="MediaOne.in" tvg-name="MediaOne TV" tvg-logo="https://i.imgur.com/eB3jV4q.png" group-title="News",MediaOne TV
+https://stream.mediaonetv.in/hls/live/mediaone/master.m3u8
+#EXTINF:-1 tvg-id="ReporterLive.in" tvg-name="Reporter TV" tvg-logo="https://i.imgur.com/LhBsm4t.png" group-title="News",Reporter TV
+https://d2q8p4pe5spbak.cloudfront.net/bpk-tv/Reporter_TV_HLS/default/index.m3u8
+#EXTINF:-1 tvg-id="24News.in" tvg-name="24 News" tvg-logo="https://i.imgur.com/O6rZ2t8.png" group-title="News",24 News
+https://twentyfournews.akamaized.net/hls/live/2034080/twentyfournews/master.m3u8
+#EXTINF:-1 tvg-id="KairaliNews.in" tvg-name="Kairali News" tvg-logo="https://i.imgur.com/wVqj9y0.png" group-title="News",Kairali News
+https://cdn-1.kairalinews.com/hls/live/master.m3u8
+#EXTINF:-1 tvg-id="ManoramaNews.in" tvg-name="Manorama News" tvg-logo="https://i.imgur.com/X4Z9z3p.png" group-title="News",Manorama News
+https://live.manoramanews.com/hls/live/2014494/MMNews/master.m3u8
+#EXTINF:-1 tvg-id="MathrubhumiNews.in" tvg-name="Mathrubhumi News" tvg-logo="https://i.imgur.com/mO4U7W5.png" group-title="News",Mathrubhumi News
+https://mbnews.akamaized.net/hls/live/2035252/mbnews/master.m3u8
+#EXTINF:-1 tvg-id="DDMalayalam.in" tvg-name="DD Malayalam" tvg-logo="https://i.imgur.com/k6lP0Qe.png" group-title="General",DD Malayalam
+https://ddmalayalam.akamaized.net/hls/live/2032488/ddmalayalam/master.m3u8
+#EXTINF:-1 tvg-id="AmritaTV.in" tvg-name="Amrita TV" tvg-logo="https://i.imgur.com/c6c39Zp.png" group-title="Entertainment",Amrita TV
+https://amritatv.akamaized.net/hls/live/2034177/amritatv/master.m3u8
+#EXTINF:-1 tvg-id="FlowersTV.in" tvg-name="Flowers TV" tvg-logo="https://i.imgur.com/T09z4Lh.png" group-title="Entertainment",Flowers TV
+https://flowerstv.akamaized.net/hls/live/2034180/flowerstv/master.m3u8
+#EXTINF:-1 tvg-id="JaihindTV.in" tvg-name="Jaihind TV" tvg-logo="https://i.imgur.com/N4qTqG2.png" group-title="General",Jaihind TV
+https://d394b3m2e8z2e1.cloudfront.net/hls/live/jaihindtv/master.m3u8
+#EXTINF:-1 tvg-id="JanamTV.in" tvg-name="Janam TV" tvg-logo="https://i.imgur.com/1B9R8Wf.png" group-title="News",Janam TV
+https://janamtv.akamaized.net/hls/live/2034178/janamtv/master.m3u8
+#EXTINF:-1 tvg-id="KaumudyTV.in" tvg-name="Kaumudy TV" tvg-logo="https://i.imgur.com/9mO6w5S.png" group-title="General",Kaumudy TV
+https://kaumudytv.akamaized.net/hls/live/2034179/kaumudytv/master.m3u8
+#EXTINF:-1 tvg-id="SafariTV.in" tvg-name="Safari TV" tvg-logo="https://i.imgur.com/1i8XlQz.png" group-title="Documentary",Safari TV
+https://safaritv.akamaized.net/hls/live/2034181/safaritv/master.m3u8
+#EXTINF:-1 tvg-id="KappaTV.in" tvg-name="Kappa TV" tvg-logo="https://i.imgur.com/j4q49U3.png" group-title="Music",Kappa TV
+https://kappatv.akamaized.net/hls/live/2035253/kappatv/master.m3u8
