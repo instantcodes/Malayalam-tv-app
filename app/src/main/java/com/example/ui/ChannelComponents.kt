@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -240,6 +241,7 @@ fun ChannelCard(
     isSelected: Boolean,
     onSelect: () -> Unit,
     onToggleFavorite: () -> Unit,
+    isLocked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val borderColor = if (isSelected) AmberPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
@@ -366,6 +368,34 @@ fun ChannelCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
+                    }
+
+                    // Parental Lock Badge
+                    if (isLocked) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFEF4444).copy(alpha = 0.18f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "PIN Protected",
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Locked",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFEF4444)
+                                )
+                            }
+                        }
                     }
 
                     // Live Broadcast Pulse

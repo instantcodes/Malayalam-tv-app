@@ -33,6 +33,12 @@ class ChannelRepository(private val context: Context) {
     private val _favoriteIds = MutableStateFlow<Set<String>>(loadFavorites())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
 
+    private val _isParentalControlEnabled = MutableStateFlow(prefs.getBoolean(PREF_PARENTAL_ENABLED, false))
+    val isParentalControlEnabled: StateFlow<Boolean> = _isParentalControlEnabled.asStateFlow()
+
+    private val _lockedChannelIds = MutableStateFlow<Set<String>>(loadLockedChannels())
+    val lockedChannelIds: StateFlow<Set<String>> = _lockedChannelIds.asStateFlow()
+
     companion object {
         private const val TAG = "ChannelRepository"
         const val PLAYLIST_URL = "https://iptv-org.github.io/iptv/languages/mal.m3u"
@@ -42,6 +48,9 @@ class ChannelRepository(private val context: Context) {
         private const val PREF_PIP_ENABLED = "key_pip_enabled"
         private const val PREF_LOCK_SCREEN_PLAY = "key_lock_screen_play"
         private const val PREF_BACKGROUND_PLAY = "key_background_play"
+        private const val PREF_PARENTAL_ENABLED = "key_parental_control_enabled"
+        private const val PREF_PARENTAL_PIN = "key_parental_control_pin"
+        private const val PREF_LOCKED_CHANNELS = "key_parental_locked_channels"
     }
 
     suspend fun loadChannels(forceRefresh: Boolean = false) {
@@ -166,5 +175,65 @@ class ChannelRepository(private val context: Context) {
 
     private fun loadFavorites(): Set<String> {
         return prefs.getStringSet(PREF_FAVORITES_KEY, emptySet()) ?: emptySet()
+    }
+
+    private fun loadLockedChannels(): Set<String> {
+        return prefs.getStringSet(PREF_LOCKED_CHANNELS, emptySet()) ?: emptySet()
+    }
+
+    fun isParentalControlEnabled(): Boolean = _isParentalControlEnabled.value
+
+    fun setParentalControlEnabled(enabled: Boolean) {
+        _isParentalControlEnabled.value = enabled
+        prefs.edit().putBoolean(PREF_PARENTAL_ENABLED, enabled).apply()
+    }
+
+    fun getParentalPin(): String? = prefs.getString(PREF_PARENTAL_PIN, null)
+
+    fun setParentalPin(pin: String) {
+        prefs.edit().putString(PREF_PARENTAL_PIN, pin).apply()
+    }
+
+    fun verifyParentalPin(pin: String): Boolean {
+        val saved = getParentalPin() ?: return false
+        return saved == pin
+    }
+
+    fun hasParentalPin(): Boolean = !getParentalPin().isNullOrBlank()
+
+    fun isChannelLocked(key: String): Boolean {
+        return _lockedChannelIds.value.contains(key)
+    }
+
+    fun toggleChannelLock(key: String): Boolean {
+        val current = _lockedChannelIds.value.toMutableSet()
+        val isLocked = if (current.contains(key)) {
+            current.remove(key)
+            false
+        } else {
+            current.add(key)
+            true
+        }
+        _lockedChannelIds.value = current
+        prefs.edit().putStringSet(PREF_LOCKED_CHANNELS, current).apply()
+        return isLocked
+    }
+
+    fun setChannelLock(key: String, locked: Boolean) {
+        val current = _lockedChannelIds.value.toMutableSet()
+        if (locked) current.add(key) else current.remove(key)
+        _lockedChannelIds.value = current
+        prefs.edit().putStringSet(PREF_LOCKED_CHANNELS, current).apply()
+    }
+
+    fun lockAllChannels(keys: Collection<String>) {
+        val current = keys.toSet()
+        _lockedChannelIds.value = current
+        prefs.edit().putStringSet(PREF_LOCKED_CHANNELS, current).apply()
+    }
+
+    fun unlockAllChannels() {
+        _lockedChannelIds.value = emptySet()
+        prefs.edit().putStringSet(PREF_LOCKED_CHANNELS, emptySet()).apply()
     }
 }

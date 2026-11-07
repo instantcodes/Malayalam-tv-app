@@ -64,6 +64,9 @@ fun HomeScreen(
     val isPipEnabled by viewModel.isPipEnabled.collectAsStateWithLifecycle()
     val isLockScreenPlay by viewModel.isLockScreenPlay.collectAsStateWithLifecycle()
     val isBackgroundPlay by viewModel.isBackgroundPlay.collectAsStateWithLifecycle()
+    val isParentalControlEnabled by viewModel.isParentalControlEnabled.collectAsStateWithLifecycle()
+    val lockedChannelIds by viewModel.lockedChannelIds.collectAsStateWithLifecycle()
+    val unlockedSessionChannels by viewModel.unlockedSessionChannels.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -111,8 +114,9 @@ fun HomeScreen(
     }
 
     // Hardware Back Button Handler
-    BackHandler(enabled = playerState.isFullscreen || uiState.isCategoryDrawerOpen || uiState.searchQuery.isNotEmpty() || uiState.isSettingsDialogVisible) {
+    BackHandler(enabled = playerState.isFullscreen || uiState.isCategoryDrawerOpen || uiState.searchQuery.isNotEmpty() || uiState.isSettingsDialogVisible || uiState.isPinPromptVisible) {
         when {
+            uiState.isPinPromptVisible -> viewModel.dismissPinPrompt()
             uiState.isSettingsDialogVisible -> viewModel.toggleSettingsDialog(false)
             uiState.isCategoryDrawerOpen -> viewModel.toggleCategoryDrawer(false)
             playerState.isFullscreen -> viewModel.setFullscreen(false)
@@ -290,7 +294,8 @@ fun HomeScreen(
                                         ChannelCard(
                                             channel = channel,
                                             isSelected = channel.id == uiState.selectedChannel?.id,
-                                            onSelect = { viewModel.selectChannel(channel, keepDrawerOpen = false) },
+                                            isLocked = viewModel.isChannelProtected(channel),
+                                            onSelect = { viewModel.onChannelClicked(channel, keepDrawerOpen = false) },
                                             onToggleFavorite = { viewModel.toggleFavorite(channel) }
                                         )
                                     }
@@ -327,6 +332,30 @@ fun HomeScreen(
                     onEnterPipNow = onEnterPip,
                     onDismissRequest = {
                         viewModel.toggleSettingsDialog(false)
+                    },
+                    isParentalControlEnabled = isParentalControlEnabled,
+                    hasParentalPin = viewModel.hasParentalPin(),
+                    channels = allChannels,
+                    lockedChannelKeys = lockedChannelIds,
+                    onToggleParentalControl = { viewModel.setParentalControlEnabled(it) },
+                    onSetParentalPin = { viewModel.setParentalPin(it) },
+                    onVerifyParentalPin = { viewModel.verifyParentalPin(it) },
+                    onToggleChannelLock = { viewModel.toggleChannelLock(it) },
+                    onLockAllChannels = { viewModel.lockAllChannels() },
+                    onUnlockAllChannels = { viewModel.unlockAllChannels() },
+                    getChannelKey = { viewModel.getChannelKey(it) }
+                )
+            }
+
+            // Pin Prompt Dialog for locked channel playback
+            if (uiState.isPinPromptVisible && uiState.channelPendingUnlock != null) {
+                PinPromptDialog(
+                    channelName = uiState.channelPendingUnlock!!.name,
+                    onVerifyPin = { pin ->
+                        viewModel.unlockAndPlayPendingChannel(pin)
+                    },
+                    onDismissRequest = {
+                        viewModel.dismissPinPrompt()
                     }
                 )
             }

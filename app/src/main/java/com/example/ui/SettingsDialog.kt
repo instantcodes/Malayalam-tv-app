@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
@@ -46,9 +47,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import com.example.UpdateChecker
 import com.example.UpdateType
+import com.example.data.Channel
+import com.example.ui.theme.TextSecondaryDark
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,11 +85,27 @@ fun SettingsDialog(
     isBackgroundPlay: Boolean,
     onToggleBackgroundPlay: (Boolean) -> Unit,
     onEnterPipNow: () -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    isParentalControlEnabled: Boolean = false,
+    hasParentalPin: Boolean = false,
+    channels: List<Channel> = emptyList(),
+    lockedChannelKeys: Set<String> = emptySet(),
+    onToggleParentalControl: (Boolean) -> Unit = {},
+    onSetParentalPin: (String) -> Unit = {},
+    onVerifyParentalPin: (String) -> Boolean = { true },
+    onToggleChannelLock: (Channel) -> Unit = {},
+    onLockAllChannels: () -> Unit = {},
+    onUnlockAllChannels: () -> Unit = {},
+    getChannelKey: (Channel) -> String = { it.id.ifBlank { it.name.lowercase().trim() } }
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+
+    var showSetPinDialog by remember { mutableStateOf(false) }
+    var showChangePinDialog by remember { mutableStateOf(false) }
+    var showManageChannelsDialog by remember { mutableStateOf(false) }
+    var showVerifyPinToDisableDialog by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -227,7 +250,124 @@ fun SettingsDialog(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Section 2: Updates & Developer Contact
+                // Section 2: Parental Control
+                Text(
+                    text = "PARENTAL CONTROL",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AmberPrimary,
+                    letterSpacing = 0.8.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SettingToggleItem(
+                    icon = Icons.Default.Security,
+                    title = "Parental Control PIN",
+                    description = if (hasParentalPin) {
+                        if (isParentalControlEnabled) "Protected channels require 4-digit PIN (${lockedChannelKeys.size} locked)"
+                        else "PIN is set. Turn ON to protect locked channels"
+                    } else {
+                        "Set a 4-digit PIN to restrict selected channels"
+                    },
+                    checked = isParentalControlEnabled,
+                    onCheckedChange = { enable ->
+                        if (enable) {
+                            if (!hasParentalPin) {
+                                showSetPinDialog = true
+                            } else {
+                                onToggleParentalControl(true)
+                            }
+                        } else {
+                            if (hasParentalPin) {
+                                showVerifyPinToDisableDialog = true
+                            } else {
+                                onToggleParentalControl(false)
+                            }
+                        }
+                    },
+                    testTag = "setting_parental_control_toggle"
+                )
+
+                if (hasParentalPin) {
+                    // Manage Locked Channels Button
+                    OutlinedButton(
+                        onClick = { showManageChannelsDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AmberPrimary),
+                        border = BorderStroke(1.dp, AmberPrimary.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 38.dp, bottom = 8.dp)
+                            .testTag("manage_locked_channels_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Manage Locked Channels (${lockedChannelKeys.size} locked)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Change PIN Button
+                    OutlinedButton(
+                        onClick = { showChangePinDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 38.dp, bottom = 12.dp)
+                            .testTag("change_pin_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = TextSecondaryDark,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Change 4-Digit PIN",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { showSetPinDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AmberPrimary),
+                        border = BorderStroke(1.dp, AmberPrimary.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 38.dp, bottom = 12.dp)
+                            .testTag("set_pin_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Set 4-Digit PIN",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Section 3: Updates & Developer Contact
                 Text(
                     text = "UPDATES & SUPPORT",
                     fontSize = 11.sp,
@@ -474,6 +614,55 @@ fun SettingsDialog(
                 }
             }
         }
+    }
+
+    if (showSetPinDialog) {
+        SetParentalPinDialog(
+            isChangingPin = false,
+            onSavePin = { newPin ->
+                onSetParentalPin(newPin)
+                onToggleParentalControl(true)
+            },
+            onDismissRequest = { showSetPinDialog = false }
+        )
+    }
+
+    if (showChangePinDialog) {
+        SetParentalPinDialog(
+            isChangingPin = true,
+            onVerifyCurrentPin = onVerifyParentalPin,
+            onSavePin = { newPin ->
+                onSetParentalPin(newPin)
+            },
+            onDismissRequest = { showChangePinDialog = false }
+        )
+    }
+
+    if (showManageChannelsDialog) {
+        ManageLockedChannelsDialog(
+            channels = channels,
+            lockedChannelKeys = lockedChannelKeys,
+            onToggleLock = onToggleChannelLock,
+            onLockAll = onLockAllChannels,
+            onUnlockAll = onUnlockAllChannels,
+            getChannelKey = getChannelKey,
+            onDismissRequest = { showManageChannelsDialog = false }
+        )
+    }
+
+    if (showVerifyPinToDisableDialog) {
+        PinPromptDialog(
+            channelName = "Parental Settings",
+            onVerifyPin = { pin ->
+                val ok = onVerifyParentalPin(pin)
+                if (ok) {
+                    onToggleParentalControl(false)
+                    showVerifyPinToDisableDialog = false
+                }
+                ok
+            },
+            onDismissRequest = { showVerifyPinToDisableDialog = false }
+        )
     }
 }
 

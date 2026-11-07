@@ -25,7 +25,9 @@ data class UiState(
     val isCategoryDrawerOpen: Boolean = false,
     val isSettingsDialogVisible: Boolean = false,
     val isPipModeActive: Boolean = false,
-    val isDarkMode: Boolean = true
+    val isDarkMode: Boolean = true,
+    val channelPendingUnlock: Channel? = null,
+    val isPinPromptVisible: Boolean = false
 )
 
 class ChannelViewModel(application: Application) : AndroidViewModel(application) {
@@ -40,6 +42,10 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
     val isPipEnabled = MutableStateFlow(repository.isPipEnabled())
     val isLockScreenPlay = MutableStateFlow(repository.isLockScreenPlayEnabled())
     val isBackgroundPlay = MutableStateFlow(repository.isBackgroundPlayEnabled())
+
+    val isParentalControlEnabled: StateFlow<Boolean> = repository.isParentalControlEnabled
+    val lockedChannelIds: StateFlow<Set<String>> = repository.lockedChannelIds
+    val unlockedSessionChannels = MutableStateFlow<Set<String>>(emptySet())
 
     private val _uiState = MutableStateFlow(
         UiState(isDarkMode = repository.isDarkModeEnabled())
@@ -93,14 +99,35 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
         loadChannels()
     }
 
+    fun getChannelKey(channel: Channel): String {
+        return channel.id.ifBlank { channel.name.lowercase().trim() }
+    }
+
+    fun isChannelProtected(channel: Channel): Boolean {
+        if (!isParentalControlEnabled.value) return false
+        val key = getChannelKey(channel)
+        val isLocked = repository.isChannelLocked(key)
+        val isSessionUnlocked = unlockedSessionChannels.value.contains(key)
+        return isLocked && !isSessionUnlocked
+    }
+
+    fun isChannelLockedInSettings(channel: Channel): Boolean {
+        val key = getChannelKey(channel)
+        return repository.isChannelLocked(key)
+    }
+
     fun loadChannels(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             repository.loadChannels(forceRefresh)
-            // Auto play the first channel if none selected (preferring favorite first since favorites come first on All)
+            // Auto play the first unlocked channel if none selected
             if (_uiState.value.selectedChannel == null && repository.channels.value.isNotEmpty()) {
                 val channels = repository.channels.value
-                val firstChannel = channels.firstOrNull { it.isFavorite } ?: channels.first()
-                selectChannel(firstChannel, keepDrawerOpen = false)
+                val firstChannel = channels.firstOrNull { it.isFavorite && !isChannelProtected(it) }
+                    ?: channels.firstOrNull { !isChannelProtected(it) }
+                    ?: channels.first()
+                if (!isChannelProtected(firstChannel)) {
+                    selectChannel(firstChannel, keepDrawerOpen = false)
+                }
             }
         }
     }
@@ -111,6 +138,41 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
             isCategoryDrawerOpen = if (keepDrawerOpen) _uiState.value.isCategoryDrawerOpen else false
         )
         playerManager.playStream(channel.streamUrl, channel.name)
+    }
+
+    fun onChannelClicked(channel: Channel, keepDrawerOpen: Boolean = false) {
+        if (isChannelProtected(channel)) {
+            _uiState.value = _uiState.value.copy(
+                channelPendingUnlock = channel,
+                isPinPromptVisible = true
+            )
+        } else {
+            selectChannel(channel, keepDrawerOpen)
+        }
+    }
+
+    fun unlockAndPlayPendingChannel(pin: String): Boolean {
+        if (repository.verifyParentalPin(pin)) {
+            val pending = _uiState.value.channelPendingUnlock
+            if (pending != null) {
+                val key = getChannelKey(pending)
+                unlockedSessionChannels.value = unlockedSessionChannels.value + key
+                selectChannel(pending, keepDrawerOpen = false)
+            }
+            _uiState.value = _uiState.value.copy(
+                channelPendingUnlock = null,
+                isPinPromptVisible = false
+            )
+            return true
+        }
+        return false
+    }
+
+    fun dismissPinPrompt() {
+        _uiState.value = _uiState.value.copy(
+            channelPendingUnlock = null,
+            isPinPromptVisible = false
+        )
     }
 
     fun selectNextChannel() {
@@ -130,7 +192,7 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
         val current = _uiState.value.selectedChannel
         val currentIndex = activeList.indexOfFirst { it.id == current?.id || it.streamUrl == current?.streamUrl }
         val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1) % activeList.size
-        selectChannel(activeList[nextIndex], keepDrawerOpen = _uiState.value.isCategoryDrawerOpen)
+        onChannelClicked(activeList[nextIndex], keepDrawerOpen = _uiState.value.isCategoryDrawerOpen)
     }
 
     fun selectPreviousChannel() {
@@ -154,7 +216,35 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
             currentIndex - 1 < 0 -> activeList.size - 1
             else -> currentIndex - 1
         }
-        selectChannel(activeList[prevIndex], keepDrawerOpen = _uiState.value.isCategoryDrawerOpen)
+        onChannelClicked(activeList[prevIndex], keepDrawerOpen = _uiState.value.isCategoryDrawerOpen)
+    }
+
+    fun setParentalControlEnabled(enabled: Boolean) {
+        repository.setParentalControlEnabled(enabled)
+    }
+
+    fun setParentalPin(pin: String) {
+        repository.setParentalPin(pin)
+    }
+
+    fun verifyParentalPin(pin: String): Boolean {
+        return repository.verifyParentalPin(pin)
+    }
+
+    fun hasParentalPin(): Boolean {
+        return repository.hasParentalPin()
+    }
+
+    fun toggleChannelLock(channel: Channel) {
+        repository.toggleChannelLock(getChannelKey(channel))
+    }
+
+    fun lockAllChannels() {
+        repository.lockAllChannels(repository.channels.value.map { getChannelKey(it) })
+    }
+
+    fun unlockAllChannels() {
+        repository.unlockAllChannels()
     }
 
     fun toggleFavorite(channel: Channel) {

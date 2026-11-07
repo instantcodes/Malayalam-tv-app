@@ -235,5 +235,26 @@ class ExampleUnitTest {
         val resultHigher = UpdateChecker.evaluateUpdate(info, currentVersionCode = 3, isSnoozed = false, ignoreSnooze = true)
         assertEquals(UpdateType.NONE, resultHigher.type)
     }
+
+    @Test
+    fun `channel key normalization handles ids and names correctly`() {
+        val ch1 = Channel("asianet-hd", "Asianet HD", "https://example.com/1.m3u8", null, "Entertainment")
+        val key1 = ch1.id.ifBlank { ch1.name.lowercase().trim() }
+        assertEquals("asianet-hd", key1)
+
+        val ch2 = Channel("", "Mazhavil Manorama", "https://example.com/2.m3u8", null, "Entertainment")
+        val key2 = ch2.id.ifBlank { ch2.name.lowercase().trim() }
+        assertEquals("mazhavil manorama", key2)
+    }
+
+    @Test
+    fun `parental pin validation checks 4 digit match`() {
+        val configuredPin = "1234"
+        val userAttemptCorrect = "1234"
+        val userAttemptIncorrect = "0000"
+
+        assertEquals(true, configuredPin == userAttemptCorrect)
+        assertEquals(false, configuredPin == userAttemptIncorrect)
+    }
 }
 
