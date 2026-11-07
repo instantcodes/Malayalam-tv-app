@@ -1,6 +1,8 @@
 package com.example.ui
 
+import android.app.Activity
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -51,6 +53,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,7 +96,21 @@ fun VideoPlayerView(
     isSideBarOpen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var areControlsVisible by remember { mutableStateOf(true) }
+
+    // Keep screen awake while playing to prevent device lock/sleep
+    DisposableEffect(playerState.isPlaying) {
+        val window = (context as? Activity)?.window
+        if (playerState.isPlaying) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     // Auto-hide controls after 4 seconds of inactivity when playing and sidebar is closed
     LaunchedEffect(areControlsVisible, playerState.isPlaying, isSideBarOpen) {
@@ -130,11 +148,13 @@ fun VideoPlayerView(
                     useController = false
                     this.resizeMode = resizeModeInt
                     player = playerManager.exoPlayer
+                    keepScreenOn = playerState.isPlaying
                 }
             },
             update = { playerView ->
                 playerView.player = playerManager.exoPlayer
                 playerView.resizeMode = resizeModeInt
+                playerView.keepScreenOn = playerState.isPlaying
             },
             modifier = Modifier.fillMaxSize()
         )

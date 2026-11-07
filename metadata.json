@@ -1,5 +1,5 @@
 {
-  "name": "Malayalam Live TV",
+  "name": "Malayali AI TV",
   "description": "Stream live Malayalam TV channels with HD video quality selection, live controls, categories, and favorites.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

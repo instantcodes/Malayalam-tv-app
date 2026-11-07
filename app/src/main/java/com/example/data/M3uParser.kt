@@ -106,11 +106,17 @@ object M3uParser {
             return null
         }
 
-        val id = tvgId?.takeIf { it.isNotBlank() } ?: cleanedName.replace(" ", "_").lowercase()
+        val finalName = if (cleanedName.isNotBlank()) {
+            cleanedName
+        } else {
+            tvgName ?: "Channel"
+        }
+
+        val id = tvgId?.takeIf { it.isNotBlank() } ?: finalName.replace(" ", "_").lowercase()
 
         return Channel(
             id = id,
-            name = if (cleanedName.isNotBlank()) cleanedName else (tvgName ?: "Channel"),
+            name = finalName,
             streamUrl = streamUrl,
             logoUrl = tvgLogo?.takeIf { it.isNotBlank() },
             groupTitle = if (groupTitle.isNotBlank()) groupTitle else "General"

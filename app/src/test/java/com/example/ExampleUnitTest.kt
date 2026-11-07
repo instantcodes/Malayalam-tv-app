@@ -45,14 +45,23 @@ class ExampleUnitTest {
             "Vision(india)",
             "Star Sports1",
             "Sttar Sports 3",
-            "Star Sports 3"
+            "Star Sports 3",
+            "Shalom America (720p)",
+            "Shalom America (720p) [Not 24/7]",
+            "Shalom America",
+            "Surya TV",
+            "Surya TV HD",
+            "Sun Surya",
+            "Sun Surya HD",
+            "Sun Surya HD (1080p)",
+            "Surya Movies"
         )
 
         for (channel in blacklisted) {
             assertTrue("Expected $channel to be blacklisted", BlacklistConfig.isBlacklisted(channel))
         }
 
-        // Channels that must remain available, including Asianet HD and Mazhavil Manorama (576p) added back:
+        // Channels that must remain available, including Asianet HD and Mazhavil Manorama:
         val allowed = listOf(
             "Asianet HD",
             "Mazhavil Manorama (576p)",
@@ -93,6 +102,8 @@ class ExampleUnitTest {
             https://example.com/sony5.m3u8
             #EXTINF:-1 tvg-id="AsianetME.in" group-title="Entertainment",Asianet Middle East
             https://example.com/asianetme.m3u8
+            #EXTINF:-1 tvg-id="SuryaTV.in" group-title="Entertainment",Surya TV HD
+            https://d3dt6rg724ecr3.cloudfront.net/SuryaTv/SuryaTV-HDR10-IN-index.m3u8
             #EXTINF:-1 tvg-id="MediaOne.in" group-title="News",MediaOne TV
             https://example.com/mediaone.m3u8
         """.trimIndent()
@@ -108,6 +119,8 @@ class ExampleUnitTest {
     fun `cleanChannelName removes picture quality tags while preserving channel name`() {
         assertEquals("Asianet", M3uParser.cleanChannelName("Asianet HD"))
         assertEquals("Mazhavil Manorama", M3uParser.cleanChannelName("Mazhavil Manorama (576p)"))
+        assertEquals("Surya TV", M3uParser.cleanChannelName("Surya TV HD"))
+        assertEquals("Sun Surya", M3uParser.cleanChannelName("Sun Surya HD (1080p)"))
         assertEquals("Asianet News", M3uParser.cleanChannelName("Asianet News (720p)"))
         assertEquals("Reporter TV", M3uParser.cleanChannelName("Reporter TV HD [1080p]"))
         assertEquals("24 News", M3uParser.cleanChannelName("24 News 1080p"))

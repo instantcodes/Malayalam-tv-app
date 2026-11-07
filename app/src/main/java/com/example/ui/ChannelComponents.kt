@@ -1,9 +1,12 @@
 package com.example.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,12 +79,21 @@ fun TopSearchBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Brand App Logo
+        Image(
+            painter = painterResource(id = R.drawable.app_logo),
+            contentDescription = "Malayali AI TV",
+            modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(10.dp))
+        )
+
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChanged,
             placeholder = {
                 Text(
-                    text = "Search Malayalam channels…",
+                    text = "Search Malayali AI TV…",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )

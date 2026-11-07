@@ -6,15 +6,18 @@ import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,7 +35,18 @@ class PlayerManager(private val context: Context) {
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
     private var progressPollJob: Job? = null
 
-    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+    companion object {
+        private const val DEFAULT_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+
+    private var activeStreamUrl: String? = null
+    private var activeChannelName: String? = null
+
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(
+        context,
+        DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+    )
         .setSeekBackIncrementMs(10000)
         .setSeekForwardIncrementMs(10000)
         .build().apply {
@@ -42,11 +56,19 @@ class PlayerManager(private val context: Context) {
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
-    private val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-        .setUserAgent("MalayalamLiveTV/1.0 (Android; ExoPlayer)")
-        .setConnectTimeoutMs(10000)
-        .setReadTimeoutMs(15000)
-        .setAllowCrossProtocolRedirects(true)
+    private fun createDataSourceFactory(): DefaultHttpDataSource.Factory {
+        return DefaultHttpDataSource.Factory()
+            .setUserAgent(DEFAULT_USER_AGENT)
+            .setConnectTimeoutMs(15000)
+            .setReadTimeoutMs(20000)
+            .setAllowCrossProtocolRedirects(true)
+            .setKeepPostFor302Redirects(true)
+            .setDefaultRequestProperties(
+                mapOf(
+                    "Accept" to "*/*"
+                )
+            )
+    }
 
     init {
         exoPlayer.addListener(object : Player.Listener {
@@ -94,7 +116,7 @@ class PlayerManager(private val context: Context) {
                         isPlaying = false,
                         isBuffering = false,
                         switchingChannelName = null,
-                        errorMessage = "Stream temporarily unavailable. Retrying or switch channels."
+                        errorMessage = "Stream temporarily unavailable. Tap to retry or select another channel."
                     )
                 }
             }
@@ -106,6 +128,18 @@ class PlayerManager(private val context: Context) {
     }
 
     fun playStream(url: String, channelName: String? = null) {
+        activeStreamUrl = url
+        activeChannelName = channelName
+        playStreamInternal(url, channelName)
+    }
+
+    fun retryCurrentStream() {
+        activeStreamUrl?.let { url ->
+            playStreamInternal(url, activeChannelName)
+        }
+    }
+
+    private fun playStreamInternal(url: String, channelName: String?) {
         try {
             // Stop previous stream cleanly to eliminate ghost frames, stale decoders, or audio overlaps
             exoPlayer.stop()
@@ -124,14 +158,21 @@ class PlayerManager(private val context: Context) {
             }
 
             val uri = Uri.parse(url)
-            val mediaItem = MediaItem.fromUri(uri)
+            val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("hls", ignoreCase = true)
+            val mediaItem = MediaItem.Builder()
+                .setUri(uri)
+                .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else null)
+                .build()
 
-            val mediaSource: MediaSource = if (url.contains(".m3u8", ignoreCase = true) || url.contains("hls", ignoreCase = true)) {
-                HlsMediaSource.Factory(httpDataSourceFactory)
-                    .setAllowChunklessPreparation(true)
+            val dataSourceFactory = createDataSourceFactory()
+
+            val mediaSource: MediaSource = if (isHls) {
+                HlsMediaSource.Factory(dataSourceFactory)
+                    .setAllowChunklessPreparation(false) // Safe against missing CODECS attribute in manifests
+                    .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(4))
                     .createMediaSource(mediaItem)
             } else {
-                ProgressiveMediaSource.Factory(httpDataSourceFactory)
+                ProgressiveMediaSource.Factory(dataSourceFactory)
                     .createMediaSource(mediaItem)
             }
 

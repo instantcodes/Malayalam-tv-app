@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Malayalam Live TV"
+rootProject.name = "Malayali AI TV"
 
 include(":app")

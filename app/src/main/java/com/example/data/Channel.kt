@@ -51,6 +51,8 @@ object BlacklistConfig {
         "pogo",
         "pottadivine",
         "selangortv",
+        "shalomamerica",
+        "shalomamerica720p",
         "tuningshalomamerica",
         "shekinahtv",
         "sonic",
@@ -63,7 +65,12 @@ object BlacklistConfig {
         "starsports3",
         "sttarsports3",
         "starsportsselect1",
-        "starsportsselect"
+        "starsportsselect",
+        "suryatv",
+        "suryatvhd",
+        "sunsurya",
+        "sunsuryahd",
+        "surya"
     )
 
     fun isBlacklisted(channelName: String): Boolean {
@@ -75,7 +82,17 @@ object BlacklistConfig {
             return true
         }
 
-        // Whitelist override: Allow Asianet HD, Asianet, and Mazhavil Manorama back
+        // Shalom America must be removed/blacklisted
+        if (normalized.contains("shalomamerica")) {
+            return true
+        }
+
+        // Surya TV / Sun Surya must be removed/blacklisted
+        if (normalized.contains("surya")) {
+            return true
+        }
+
+        // Whitelist override: Allow Asianet HD and Mazhavil Manorama back
         if (allowedWhitelist.any { normalized == it || normalized.startsWith(it) }) {
             return false
         }
