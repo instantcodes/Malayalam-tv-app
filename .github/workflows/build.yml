@@ -26,16 +26,23 @@ jobs:
         with:
           gradle-version: 9.3.1
 
+      - name: Prepare release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+
       - name: Build release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon
 
       - name: Sign APK
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.jks
           BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
           UNSIGNED=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           $BT/zipalign -p -f 4 "$UNSIGNED" aligned.apk
