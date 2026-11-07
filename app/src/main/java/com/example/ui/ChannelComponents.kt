@@ -319,6 +319,22 @@ fun ChannelCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (channel.isFavorite) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = AmberPrimary.copy(alpha = 0.18f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AmberPrimary.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "★ Favorite",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AmberPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     // Category Badge
                     Surface(
                         shape = RoundedCornerShape(4.dp),

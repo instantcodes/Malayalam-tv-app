@@ -78,9 +78,9 @@ fun ChannelSideBar(
     var localSearchQuery by remember { mutableStateOf("") }
 
     val filteredList = remember(channels, localSearchQuery, selectedCategory) {
-        channels.filter { ch ->
+        val filtered = channels.filter { ch ->
             val matchesCategory = when {
-                selectedCategory == "All" -> true
+                selectedCategory.equals("All", ignoreCase = true) -> true
                 selectedCategory.contains("Favorites") -> ch.isFavorite
                 else -> ch.displayCategory.equals(selectedCategory, ignoreCase = true)
             }
@@ -91,6 +91,12 @@ fun ChannelSideBar(
                 ch.displayCategory.contains(localSearchQuery, ignoreCase = true)
             }
             matchesCategory && matchesSearch
+        }
+
+        if (selectedCategory.equals("All", ignoreCase = true)) {
+            filtered.sortedByDescending { it.isFavorite }
+        } else {
+            filtered
         }
     }
 

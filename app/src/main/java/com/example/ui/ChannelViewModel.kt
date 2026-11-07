@@ -56,10 +56,10 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
         repository.channels,
         _uiState
     ) { channels, state ->
-        channels.filter { channel ->
+        val filtered = channels.filter { channel ->
             // Category filter
             val matchesCategory = when {
-                state.selectedCategory == "All" -> true
+                state.selectedCategory.equals("All", ignoreCase = true) -> true
                 state.selectedCategory.contains("Favorites") -> channel.isFavorite
                 else -> channel.displayCategory.equals(state.selectedCategory, ignoreCase = true)
             }
@@ -74,6 +74,13 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
 
             matchesCategory && matchesSearch
         }
+
+        // When "All" category is selected, favorite channels come First
+        if (state.selectedCategory.equals("All", ignoreCase = true)) {
+            filtered.sortedByDescending { it.isFavorite }
+        } else {
+            filtered
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -83,9 +90,11 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
     fun loadChannels(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             repository.loadChannels(forceRefresh)
-            // Auto play the first channel if none selected
+            // Auto play the first channel if none selected (preferring favorite first since favorites come first on All)
             if (_uiState.value.selectedChannel == null && repository.channels.value.isNotEmpty()) {
-                selectChannel(repository.channels.value.first(), keepDrawerOpen = false)
+                val channels = repository.channels.value
+                val firstChannel = channels.firstOrNull { it.isFavorite } ?: channels.first()
+                selectChannel(firstChannel, keepDrawerOpen = false)
             }
         }
     }
@@ -102,7 +111,13 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
         val activeList = if (filteredChannels.value.isNotEmpty()) {
             filteredChannels.value
         } else {
-            repository.channels.value
+            repository.channels.value.let { list ->
+                if (_uiState.value.selectedCategory.equals("All", ignoreCase = true)) {
+                    list.sortedByDescending { it.isFavorite }
+                } else {
+                    list
+                }
+            }
         }
         if (activeList.isEmpty()) return
 
@@ -116,7 +131,13 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
         val activeList = if (filteredChannels.value.isNotEmpty()) {
             filteredChannels.value
         } else {
-            repository.channels.value
+            repository.channels.value.let { list ->
+                if (_uiState.value.selectedCategory.equals("All", ignoreCase = true)) {
+                    list.sortedByDescending { it.isFavorite }
+                } else {
+                    list
+                }
+            }
         }
         if (activeList.isEmpty()) return
 

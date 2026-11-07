@@ -145,4 +145,24 @@ class ExampleUnitTest {
         val ch3 = Channel("3", "Anime", "https://example.com/stream.m3u8", null, "Animation")
         assertEquals("Kids", ch3.displayCategory)
     }
+
+    @Test
+    fun `favorite channels come first when sorting on All category`() {
+        val list = listOf(
+            Channel("1", "Asianet", "https://example.com/1.m3u8", null, "Entertainment", isFavorite = false),
+            Channel("2", "Mazhavil Manorama", "https://example.com/2.m3u8", null, "Entertainment", isFavorite = true),
+            Channel("3", "MediaOne", "https://example.com/3.m3u8", null, "News", isFavorite = false),
+            Channel("4", "24 News", "https://example.com/4.m3u8", null, "News", isFavorite = true)
+        )
+
+        val sorted = list.sortedByDescending { it.isFavorite }
+        assertEquals("Mazhavil Manorama", sorted[0].name)
+        assertEquals("24 News", sorted[1].name)
+        assertEquals("Asianet", sorted[2].name)
+        assertEquals("MediaOne", sorted[3].name)
+        assertTrue(sorted[0].isFavorite)
+        assertTrue(sorted[1].isFavorite)
+        assertFalse(sorted[2].isFavorite)
+        assertFalse(sorted[3].isFavorite)
+    }
 }
