@@ -23,8 +23,15 @@ data class Channel(
 }
 
 object BlacklistConfig {
+    // Whitelist for channels explicitly requested back by the user
+    private val allowedWhitelist = listOf(
+        "asianethd",
+        "asianet",
+        "mazhavilmanorama576p",
+        "mazhavilmanorama"
+    )
+
     private val blacklistedPatterns = listOf(
-        "mazhavilmanoramahd",
         "anandtv",
         "asianetmiddleeast",
         "cmalayalamtv",
@@ -62,8 +69,19 @@ object BlacklistConfig {
     fun isBlacklisted(channelName: String): Boolean {
         val normalized = normalize(channelName)
         if (normalized.isBlank()) return false
+
+        // Asianet Middle East must remain blacklisted
+        if (normalized.contains("middleeast") || normalized.contains("asianetmiddleeast")) {
+            return true
+        }
+
+        // Whitelist override: Allow Asianet HD, Asianet, and Mazhavil Manorama back
+        if (allowedWhitelist.any { normalized == it || normalized.startsWith(it) }) {
+            return false
+        }
+
         return blacklistedPatterns.any { pattern ->
-            normalized == pattern || normalized.contains(pattern) || pattern.contains(normalized)
+            normalized == pattern || normalized.contains(pattern)
         }
     }
 

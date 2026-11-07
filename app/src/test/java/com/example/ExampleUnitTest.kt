@@ -14,7 +14,6 @@ class ExampleUnitTest {
     fun `blacklist filter correctly detects user specified blacklisted channels`() {
         // Channels explicitly requested to be removed:
         val blacklisted = listOf(
-            "Mazhavil Manorama HD",
             "Anand TV",
             "Asianet Middle East",
             "C Malayalam TV",
@@ -53,8 +52,11 @@ class ExampleUnitTest {
             assertTrue("Expected $channel to be blacklisted", BlacklistConfig.isBlacklisted(channel))
         }
 
-        // Channels that must remain available:
+        // Channels that must remain available, including Asianet HD and Mazhavil Manorama (576p) added back:
         val allowed = listOf(
+            "Asianet HD",
+            "Mazhavil Manorama (576p)",
+            "Mazhavil Manorama",
             "Asianet News",
             "MediaOne TV",
             "Reporter TV",
@@ -78,29 +80,34 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun `m3u parser excludes blacklisted channels and keeps allowed channels`() {
+    fun `m3u parser excludes blacklisted channels and keeps allowed channels including Mazhavil Manorama and Asianet HD`() {
         val testM3u = """
             #EXTM3U
-            #EXTINF:-1 tvg-id="AsianetNews.in" group-title="News",Asianet News
-            https://example.com/asianet.m3u8
+            #EXTINF:-1 tvg-id="AsianetHD.in" group-title="Entertainment",Asianet HD
+            https://example.com/asianethd.m3u8
+            #EXTINF:-1 tvg-id="Mazhavil.in" group-title="Entertainment",Mazhavil Manorama (576p)
+            https://example.com/mazhavil.m3u8
             #EXTINF:-1 tvg-id="Pogo.in" group-title="Kids",Pogo
             https://example.com/pogo.m3u8
             #EXTINF:-1 tvg-id="SonyTen5.in" group-title="Sports",Sony Sports Ten 5
             https://example.com/sony5.m3u8
-            #EXTINF:-1 tvg-id="StarSelect.in" group-title="Sports",Star Sports Select 1
-            https://example.com/star1.m3u8
+            #EXTINF:-1 tvg-id="AsianetME.in" group-title="Entertainment",Asianet Middle East
+            https://example.com/asianetme.m3u8
             #EXTINF:-1 tvg-id="MediaOne.in" group-title="News",MediaOne TV
             https://example.com/mediaone.m3u8
         """.trimIndent()
 
         val parsed = M3uParser.parse(testM3u)
-        assertEquals(2, parsed.size)
-        assertEquals("Asianet News", parsed[0].name)
-        assertEquals("MediaOne TV", parsed[1].name)
+        assertEquals(3, parsed.size)
+        assertEquals("Asianet", parsed[0].name)
+        assertEquals("Mazhavil Manorama", parsed[1].name)
+        assertEquals("MediaOne TV", parsed[2].name)
     }
 
     @Test
     fun `cleanChannelName removes picture quality tags while preserving channel name`() {
+        assertEquals("Asianet", M3uParser.cleanChannelName("Asianet HD"))
+        assertEquals("Mazhavil Manorama", M3uParser.cleanChannelName("Mazhavil Manorama (576p)"))
         assertEquals("Asianet News", M3uParser.cleanChannelName("Asianet News (720p)"))
         assertEquals("Reporter TV", M3uParser.cleanChannelName("Reporter TV HD [1080p]"))
         assertEquals("24 News", M3uParser.cleanChannelName("24 News 1080p"))

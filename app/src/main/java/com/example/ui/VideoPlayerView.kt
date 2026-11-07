@@ -231,31 +231,6 @@ fun VideoPlayerView(
             }
         }
 
-        // Quick Edge Tab to Toggle Side Bar only in Fullscreen Mode
-        if (playerState.isFullscreen && !areControlsVisible && !isSideBarOpen) {
-            Surface(
-                shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp),
-                color = Color.Black.copy(alpha = 0.65f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, AmberPrimary.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-                    .clickable { onToggleSideBar() }
-                    .testTag("floating_toggle_side_bar_tab")
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.List,
-                        contentDescription = "Open Channels List",
-                        tint = AmberPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
 
         // Custom Overlay Controls (Fades in/out)
         AnimatedVisibility(

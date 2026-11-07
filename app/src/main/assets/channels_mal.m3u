@@ -1,4 +1,8 @@
 #EXTM3U
+#EXTINF:-1 tvg-id="Asianet.in" tvg-name="Asianet" tvg-logo="https://i.imgur.com/8Q6WqgA.png" group-title="Entertainment",Asianet HD
+https://y5w8j4a9.ssl.hwcdn.net/asianetlive/tracks-v1a1/mono.m3u8
+#EXTINF:-1 tvg-id="MazhavilManorama.in" tvg-name="Mazhavil Manorama" tvg-logo="https://i.imgur.com/X4Z9z3p.png" group-title="Entertainment",Mazhavil Manorama (576p)
+https://live.manoramanews.com/hls/live/2014494/MMNews/master.m3u8
 #EXTINF:-1 tvg-id="AsianetNews.in" tvg-name="Asianet News" tvg-logo="https://i.imgur.com/8Q6WqgA.png" group-title="News",Asianet News
 https://y5w8j4a9.ssl.hwcdn.net/asianetlive/tracks-v1a1/mono.m3u8
 #EXTINF:-1 tvg-id="MediaOne.in" tvg-name="MediaOne TV" tvg-logo="https://i.imgur.com/eB3jV4q.png" group-title="News",MediaOne TV
