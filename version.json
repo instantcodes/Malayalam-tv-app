@@ -1,22 +1,24 @@
 {
-  "latestVersionCode": 2,
+  "latestVersionCode": 3,
   "minVersionCode": 1,
-  "latestVersionName": "1.1",
-  "updateDeadline": "2026-11-01",
+  "latestVersionName": "1.2",
+  "updateDeadline": "2026-12-01",
   "message": "New version is ready!",
   "downloadUrl": "https://github.com/instantcodes/Malayalam-tv-app/releases/latest/download/Malayali.AI.TV.apk",
-  "announcement": {
-    "id": "christmas-2026",
-    "title": "Happy Dewali ! 🎄",
-    "text": "Wishing you and your family a joyful Diwali from Malayalam Live TV!",
-    "startDate": "2026-11-06",
-    "endDate": "2026-12-26"
-  }
-  "announcement": {
-  "id": "christmas-2026-b",
-  "title": "Merry Christmas! 🎄",
-  "text": "Wishing you and your family a joyful Christmas from Malayalam Live TV!",
-  "startDate": "2026-11-04",
-  "endDate": "2026-12-26"
-}
+  "announcements": [
+    {
+      "id": "diwali-2026",
+      "title": "Happy Diwali! 🪔",
+      "text": "Wishing you and your family a joyful Diwali from Malayalam Live TV!",
+      "startDate": "2026-11-06",
+      "endDate": "2026-11-12"
+    },
+    {
+      "id": "christmas-2026",
+      "title": "Merry Christmas! 🎄",
+      "text": "Wishing you and your family a joyful Christmas from Malayalam Live TV!",
+      "startDate": "2026-11-06",
+      "endDate": "2026-12-26"
+    }
+  ]
 }
