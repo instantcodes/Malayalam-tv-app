@@ -2,6 +2,7 @@
   "latestVersionCode": 2,
   "minVersionCode": 1,
   "latestVersionName": "1.1",
-  "message": "New version is ready! Bug fixes and new channels",
+  "updateDeadline": "2026-12-01",
+  "message": "New version is ready! Please update before the deadline.",
   "downloadUrl": "https://github.com/instantcodes/Malayalam-tv-app/releases/latest/download/Malayali.AI.TV.apk"
 }
