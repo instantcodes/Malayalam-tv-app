@@ -45,6 +45,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.UpdateChecker
+import com.example.UpdateType
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +81,7 @@ fun SettingsDialog(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -274,7 +279,12 @@ fun SettingsDialog(
                 // Updates Button
                 Button(
                     onClick = {
-                        openUrl(context, "https://malayali-ai-tv-redirect.vercel.app")
+                        scope.launch {
+                            val result = UpdateChecker.checkManually(context)
+                            if (result.type != UpdateType.NONE) {
+                                onDismissRequest()
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,

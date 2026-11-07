@@ -164,4 +164,76 @@ class ExampleUnitTest {
         assertFalse(sorted[2].isFavorite)
         assertFalse(sorted[3].isFavorite)
     }
+
+    @Test
+    fun `evaluateUpdate returns FORCED when current versionCode is less than minVersionCode`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 5,
+            minVersionCode = 3,
+            latestVersionName = "1.5",
+            message = "Critical security update",
+            downloadUrl = "https://example.com/app.apk"
+        )
+
+        val result = UpdateChecker.evaluateUpdate(info, currentVersionCode = 2, isSnoozed = false, ignoreSnooze = false)
+        assertEquals(UpdateType.FORCED, result.type)
+        assertEquals(info, result.info)
+
+        // Forced update also ignores snooze
+        val snoozedResult = UpdateChecker.evaluateUpdate(info, currentVersionCode = 2, isSnoozed = true, ignoreSnooze = false)
+        assertEquals(UpdateType.FORCED, snoozedResult.type)
+    }
+
+    @Test
+    fun `evaluateUpdate returns OPTIONAL when current is between min and latest and not snoozed`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "New features available",
+            downloadUrl = "https://example.com/app.apk"
+        )
+
+        // Current is 1 (matches minVersionCode 1, less than latestVersionCode 2)
+        val result = UpdateChecker.evaluateUpdate(info, currentVersionCode = 1, isSnoozed = false, ignoreSnooze = false)
+        assertEquals(UpdateType.OPTIONAL, result.type)
+        assertEquals("New features available", result.info?.message)
+    }
+
+    @Test
+    fun `evaluateUpdate respects snooze for optional updates unless ignoreSnooze is true`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "New features available",
+            downloadUrl = "https://example.com/app.apk"
+        )
+
+        // Snoozed and ignoreSnooze is false -> returns NONE
+        val snoozedResult = UpdateChecker.evaluateUpdate(info, currentVersionCode = 1, isSnoozed = true, ignoreSnooze = false)
+        assertEquals(UpdateType.NONE, snoozedResult.type)
+
+        // Snoozed but ignoreSnooze is true (manual check from Settings) -> returns OPTIONAL
+        val manualResult = UpdateChecker.evaluateUpdate(info, currentVersionCode = 1, isSnoozed = true, ignoreSnooze = true)
+        assertEquals(UpdateType.OPTIONAL, manualResult.type)
+    }
+
+    @Test
+    fun `evaluateUpdate returns NONE when app is on or above latest version`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "New version",
+            downloadUrl = "https://example.com/app.apk"
+        )
+
+        val resultEqual = UpdateChecker.evaluateUpdate(info, currentVersionCode = 2, isSnoozed = false, ignoreSnooze = true)
+        assertEquals(UpdateType.NONE, resultEqual.type)
+
+        val resultHigher = UpdateChecker.evaluateUpdate(info, currentVersionCode = 3, isSnoozed = false, ignoreSnooze = true)
+        assertEquals(UpdateType.NONE, resultHigher.type)
+    }
 }
+
