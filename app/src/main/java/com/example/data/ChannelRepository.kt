@@ -95,7 +95,23 @@ class ChannelRepository(private val context: Context) {
                 val favs = _favoriteIds.value
                 val mapped = parsed.map { channel ->
                     channel.copy(isFavorite = favs.contains(channel.id) || favs.contains(channel.name.lowercase()))
+                }.toMutableList()
+
+                // Guarantee that the requested Surya TV stream is always included
+                if (mapped.none { it.streamUrl.contains("SuryaTv/SuryaTV-HDR10-IN-index.m3u8", ignoreCase = true) }) {
+                    mapped.add(
+                        2.coerceAtMost(mapped.size),
+                        Channel(
+                            id = "suryatv",
+                            name = "Surya TV",
+                            streamUrl = "https://d3dt6rg724ecr3.cloudfront.net/SuryaTv/SuryaTV-HDR10-IN-index.m3u8",
+                            logoUrl = "https://jiotvimages.cdn.jio.com/dare_images/images/Surya_HD.png",
+                            groupTitle = "Entertainment",
+                            isFavorite = favs.contains("suryatv") || favs.contains("surya tv")
+                        )
+                    )
                 }
+
                 _channels.value = mapped
             } else {
                 _errorMessage.value = "Unable to load channels. Please check network connection."

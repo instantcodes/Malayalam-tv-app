@@ -28,7 +28,12 @@ object BlacklistConfig {
         "asianethd",
         "asianet",
         "mazhavilmanorama576p",
-        "mazhavilmanorama"
+        "mazhavilmanorama",
+        "suryatv",
+        "suryatvhd",
+        "sunsurya",
+        "sunsuryahd",
+        "surya"
     )
 
     private val blacklistedPatterns = listOf(
@@ -65,12 +70,7 @@ object BlacklistConfig {
         "starsports3",
         "sttarsports3",
         "starsportsselect1",
-        "starsportsselect",
-        "suryatv",
-        "suryatvhd",
-        "sunsurya",
-        "sunsuryahd",
-        "surya"
+        "starsportsselect"
     )
 
     fun isBlacklisted(channelName: String): Boolean {
@@ -87,12 +87,7 @@ object BlacklistConfig {
             return true
         }
 
-        // Surya TV / Sun Surya must be removed/blacklisted
-        if (normalized.contains("surya")) {
-            return true
-        }
-
-        // Whitelist override: Allow Asianet HD and Mazhavil Manorama back
+        // Whitelist override: Allow Asianet HD, Mazhavil Manorama, and Surya TV back
         if (allowedWhitelist.any { normalized == it || normalized.startsWith(it) }) {
             return false
         }

@@ -184,14 +184,17 @@ fun VideoPlayerView(
                             "Buffering Live Stream…"
                         },
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Loading stream buffer",
+                        text = "Content may delayed during server load",
                         color = AmberPrimary,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 2.dp)
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp)
                     )
                 }
             }

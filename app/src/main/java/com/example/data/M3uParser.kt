@@ -106,10 +106,10 @@ object M3uParser {
             return null
         }
 
-        val finalName = if (cleanedName.isNotBlank()) {
-            cleanedName
-        } else {
-            tvgName ?: "Channel"
+        val finalName = when {
+            cleanedName.equals("Sun Surya", ignoreCase = true) || cleanedName.equals("Surya TV", ignoreCase = true) -> "Surya TV"
+            cleanedName.isNotBlank() -> cleanedName
+            else -> tvgName ?: "Channel"
         }
 
         val id = tvgId?.takeIf { it.isNotBlank() } ?: finalName.replace(" ", "_").lowercase()

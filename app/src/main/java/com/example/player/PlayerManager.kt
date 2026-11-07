@@ -17,6 +17,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,10 +44,21 @@ class PlayerManager(private val context: Context) {
     private var activeStreamUrl: String? = null
     private var activeChannelName: String? = null
 
+    val trackSelector: DefaultTrackSelector = DefaultTrackSelector(context).apply {
+        setParameters(
+            buildUponParameters()
+                .setExceedRendererCapabilitiesIfNecessary(false)
+                .setExceedVideoConstraintsIfNecessary(true)
+        )
+    }
+
     val exoPlayer: ExoPlayer = ExoPlayer.Builder(
         context,
-        DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+        DefaultRenderersFactory(context)
+            .setEnableDecoderFallback(true)
+            .forceDisableMediaCodecAsynchronousQueueing()
     )
+        .setTrackSelector(trackSelector)
         .setSeekBackIncrementMs(10000)
         .setSeekForwardIncrementMs(10000)
         .build().apply {
@@ -111,12 +123,30 @@ class PlayerManager(private val context: Context) {
 
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("PlayerManager", "Player error: ${error.message}", error)
+                val isDecoderError = error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                        error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                        error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ||
+                        error.message?.contains("c2.android.hevc", ignoreCase = true) == true ||
+                        error.message?.contains("MediaCodec", ignoreCase = true) == true ||
+                        error.message?.contains("NO_EXCEEDS_CAPABILITIES", ignoreCase = true) == true
+
+                val userMessage = when {
+                    isDecoderError ->
+                        "This stream (HEVC HDR10) exceeds this device's video decoder capabilities. Content may delayed during server load. Please try another channel."
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
+                        "Stream connection timed out. Content may delayed during server load. Tap to retry or select another channel."
+                    else ->
+                        "Stream temporarily unavailable. Content may delayed during server load. Tap to retry or select another channel."
+                }
+
                 _playerState.update {
                     it.copy(
                         isPlaying = false,
                         isBuffering = false,
                         switchingChannelName = null,
-                        errorMessage = "Stream temporarily unavailable. Tap to retry or select another channel."
+                        errorMessage = userMessage
                     )
                 }
             }
@@ -142,8 +172,12 @@ class PlayerManager(private val context: Context) {
     private fun playStreamInternal(url: String, channelName: String?) {
         try {
             // Stop previous stream cleanly to eliminate ghost frames, stale decoders, or audio overlaps
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
+            try {
+                exoPlayer.stop()
+                exoPlayer.clearMediaItems()
+            } catch (e: Exception) {
+                Log.w("PlayerManager", "Safe recovery during player stop: ${e.message}")
+            }
 
             _playerState.update {
                 it.copy(
@@ -218,14 +252,17 @@ class PlayerManager(private val context: Context) {
     }
 
     fun setVideoQuality(quality: VideoQuality) {
-        val builder = exoPlayer.trackSelectionParameters.buildUpon()
+        val builder = trackSelector.buildUponParameters()
+            .setExceedRendererCapabilitiesIfNecessary(false)
+            .setExceedVideoConstraintsIfNecessary(true)
+
         if (quality == VideoQuality.AUTO) {
             builder.clearVideoSizeConstraints()
         } else {
             // Constrain video height
             builder.setMaxVideoSize(quality.maxHeight * 16 / 9, quality.maxHeight)
         }
-        exoPlayer.trackSelectionParameters = builder.build()
+        trackSelector.setParameters(builder)
 
         val label = when (quality) {
             VideoQuality.AUTO -> "Auto"

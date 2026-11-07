@@ -48,24 +48,22 @@ class ExampleUnitTest {
             "Star Sports 3",
             "Shalom America (720p)",
             "Shalom America (720p) [Not 24/7]",
-            "Shalom America",
-            "Surya TV",
-            "Surya TV HD",
-            "Sun Surya",
-            "Sun Surya HD",
-            "Sun Surya HD (1080p)",
-            "Surya Movies"
+            "Shalom America"
         )
 
         for (channel in blacklisted) {
             assertTrue("Expected $channel to be blacklisted", BlacklistConfig.isBlacklisted(channel))
         }
 
-        // Channels that must remain available, including Asianet HD and Mazhavil Manorama:
+        // Channels that must remain available, including Asianet HD, Mazhavil Manorama, and Surya TV:
         val allowed = listOf(
             "Asianet HD",
             "Mazhavil Manorama (576p)",
             "Mazhavil Manorama",
+            "Surya TV",
+            "Surya TV HD",
+            "Sun Surya",
+            "Sun Surya HD",
             "Asianet News",
             "MediaOne TV",
             "Reporter TV",
@@ -109,10 +107,11 @@ class ExampleUnitTest {
         """.trimIndent()
 
         val parsed = M3uParser.parse(testM3u)
-        assertEquals(3, parsed.size)
+        assertEquals(4, parsed.size)
         assertEquals("Asianet", parsed[0].name)
         assertEquals("Mazhavil Manorama", parsed[1].name)
-        assertEquals("MediaOne TV", parsed[2].name)
+        assertEquals("Surya TV", parsed[2].name)
+        assertEquals("MediaOne TV", parsed[3].name)
     }
 
     @Test
