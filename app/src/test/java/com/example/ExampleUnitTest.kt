@@ -403,5 +403,56 @@ class ExampleUnitTest {
         val invalidAnn = announcement.copy(startDate = "not-a-date")
         assertFalse(checkDateRange(invalidAnn, LocalDate.of(2026, 11, 7)))
     }
+
+    @Test
+    fun `announcements list supports multiple announcements and backward compatibility with single announcement getter`() {
+        val a1 = AnnouncementInfo("ann-1", "Title 1", "Text 1", "2026-11-01", "2026-11-30")
+        val a2 = AnnouncementInfo("ann-2", "Title 2", "Text 2", "2026-12-01", "2026-12-31")
+
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "Update available",
+            downloadUrl = "https://example.com/app.apk",
+            announcements = listOf(a1, a2)
+        )
+
+        assertEquals(2, info.announcements.size)
+        assertEquals("ann-1", info.announcements[0].id)
+        assertEquals("ann-2", info.announcements[1].id)
+        // Backward compatibility helper returns first announcement
+        assertEquals("ann-1", info.announcement?.id)
+
+        // Empty announcements list returns null for announcement getter
+        val emptyInfo = info.copy(announcements = emptyList())
+        assertEquals(null, emptyInfo.announcement)
+    }
+
+    @Test
+    fun `announcements queue simulates showing one after another`() {
+        val a1 = AnnouncementInfo("1", "T1", "M1", "2026-11-01", "2026-11-10")
+        val a2 = AnnouncementInfo("2", "T2", "M2", "2026-11-01", "2026-11-10")
+        val queue = mutableListOf(a1, a2)
+
+        var active: AnnouncementInfo? = queue.removeAt(0)
+        assertEquals("1", active?.id)
+
+        // User taps OK on first
+        if (queue.isNotEmpty()) {
+            active = queue.removeAt(0)
+        } else {
+            active = null
+        }
+        assertEquals("2", active?.id)
+
+        // User taps OK on second
+        if (queue.isNotEmpty()) {
+            active = queue.removeAt(0)
+        } else {
+            active = null
+        }
+        assertEquals(null, active)
+    }
 }
 

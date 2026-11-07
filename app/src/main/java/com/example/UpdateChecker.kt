@@ -36,8 +36,12 @@ data class AppUpdateInfo(
     val message: String,
     val downloadUrl: String,
     val updateDeadline: String = "",
-    val announcement: AnnouncementInfo? = null
-)
+    val announcements: List<AnnouncementInfo> = emptyList()
+) {
+    // Backward compatibility helper for single announcement
+    val announcement: AnnouncementInfo?
+        get() = announcements.firstOrNull()
+}
 
 typealias UpdateInfo = AppUpdateInfo
 
@@ -65,7 +69,10 @@ object UpdateChecker {
     var activeUpdate by mutableStateOf<UpdateResult?>(null)
         private set
 
-    // Observable active announcement for UpdateGate composable
+    // Queue of pending announcements to show one after another
+    private val pendingAnnouncements = mutableListOf<AnnouncementInfo>()
+
+    // Observable active announcement currently being displayed
     var activeAnnouncement by mutableStateOf<AnnouncementInfo?>(null)
         private set
 
@@ -74,10 +81,17 @@ object UpdateChecker {
         activeUpdate = null
     }
 
-    // Dismiss active announcement and mark it as shown in SharedPreferences
+    // Dismiss active announcement, mark it as shown in SharedPreferences, and show next if available
     fun dismissAnnouncement(context: Context) {
-        activeAnnouncement?.let { markAnnouncementShown(context, it.id) }
-        activeAnnouncement = null
+        val current = activeAnnouncement
+        if (current != null) {
+            markAnnouncementShown(context, current.id)
+        }
+        if (pendingAnnouncements.isNotEmpty()) {
+            activeAnnouncement = pendingAnnouncements.removeAt(0)
+        } else {
+            activeAnnouncement = null
+        }
     }
 
     // Read current app versionCode from PackageManager
@@ -163,23 +177,45 @@ object UpdateChecker {
         }
     }
 
+    // Helper to parse AnnouncementInfo from a JSONObject safely
+    private fun parseAnnouncement(obj: JSONObject?): AnnouncementInfo? {
+        if (obj == null) return null
+        val id = obj.optString("id", "").trim()
+        val title = obj.optString("title", "").trim()
+        val text = obj.optString("text", "").trim()
+        val startDate = obj.optString("startDate", "").trim()
+        val endDate = obj.optString("endDate", "").trim()
+        return if (id.isNotEmpty() && title.isNotEmpty() && text.isNotEmpty() && startDate.isNotEmpty() && endDate.isNotEmpty()) {
+            AnnouncementInfo(id, title, text, startDate, endDate)
+        } else null
+    }
+
     // Fetch version JSON off main thread
     suspend fun fetchUpdateInfo(): AppUpdateInfo? = withContext(Dispatchers.IO) {
         try {
             val jsonString = URL(VERSION_URL).readText()
             val json = JSONObject(jsonString)
 
-            val announcementObj = json.optJSONObject("announcement")
-            val announcement = if (announcementObj != null) {
-                val id = announcementObj.optString("id", "").trim()
-                val title = announcementObj.optString("title", "").trim()
-                val text = announcementObj.optString("text", "").trim()
-                val startDate = announcementObj.optString("startDate", "").trim()
-                val endDate = announcementObj.optString("endDate", "").trim()
-                if (id.isNotEmpty() && title.isNotEmpty() && text.isNotEmpty() && startDate.isNotEmpty() && endDate.isNotEmpty()) {
-                    AnnouncementInfo(id, title, text, startDate, endDate)
-                } else null
-            } else null
+            val announcementsList = mutableListOf<AnnouncementInfo>()
+
+            // 1. Support "announcements" array
+            val announcementsArray = json.optJSONArray("announcements")
+            if (announcementsArray != null) {
+                for (i in 0 until announcementsArray.length()) {
+                    val obj = announcementsArray.optJSONObject(i)
+                    parseAnnouncement(obj)?.let { announcementsList.add(it) }
+                }
+            }
+
+            // 2. Keep supporting the old single "announcement" object if present and not already added
+            val singleObj = json.optJSONObject("announcement")
+            if (singleObj != null) {
+                parseAnnouncement(singleObj)?.let { singleAnn ->
+                    if (announcementsList.none { it.id == singleAnn.id }) {
+                        announcementsList.add(singleAnn)
+                    }
+                }
+            }
 
             AppUpdateInfo(
                 latestVersionCode = json.optInt("latestVersionCode", 0),
@@ -188,7 +224,7 @@ object UpdateChecker {
                 message = json.optString("message", ""),
                 downloadUrl = json.optString("downloadUrl", ""),
                 updateDeadline = json.optString("updateDeadline", ""),
-                announcement = announcement
+                announcements = announcementsList
             )
         } catch (e: Exception) {
             // Fail silently on network error or invalid JSON
@@ -275,11 +311,15 @@ object UpdateChecker {
             if (result.type != UpdateType.NONE) {
                 activeUpdate = result
             }
-            // Rule 3: If a forced update dialog is showing, do not show the announcement
+            // Rule 4: Do not show announcements while a forced update dialog is showing
             val isForced = result.type == UpdateType.FORCED
-            if (!isForced && info.announcement != null) {
-                if (shouldShowAnnouncement(info.announcement, context, today)) {
-                    activeAnnouncement = info.announcement
+            if (!isForced && info.announcements.isNotEmpty()) {
+                val qualifying = info.announcements.filter { shouldShowAnnouncement(it, context, today) }
+                if (qualifying.isNotEmpty()) {
+                    pendingAnnouncements.clear()
+                    pendingAnnouncements.addAll(qualifying)
+                    // Show first qualifying announcement
+                    activeAnnouncement = pendingAnnouncements.removeAt(0)
                 }
             }
         }
