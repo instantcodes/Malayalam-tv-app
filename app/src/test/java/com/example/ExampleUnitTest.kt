@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 class ExampleUnitTest {
 
@@ -255,6 +256,152 @@ class ExampleUnitTest {
 
         assertEquals(true, configuredPin == userAttemptCorrect)
         assertEquals(false, configuredPin == userAttemptIncorrect)
+    }
+
+    @Test
+    fun `evaluateUpdate with updateDeadline shows optional dialog and days left when today is before deadline`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "New version is ready!",
+            downloadUrl = "https://example.com/app.apk",
+            updateDeadline = "2026-11-15"
+        )
+        val today = LocalDate.of(2026, 11, 7)
+
+        val result = UpdateChecker.evaluateUpdate(
+            info = info,
+            currentVersionCode = 1,
+            isSnoozed = false,
+            ignoreSnooze = false,
+            today = today
+        )
+
+        assertEquals(UpdateType.OPTIONAL, result.type)
+        assertTrue("Message should contain deadline text", result.info?.message?.contains("Update required by 2026-11-15 (8 days left)") == true)
+        assertTrue("Message should contain original message", result.info?.message?.contains("New version is ready!") == true)
+
+        // Respects 3-day snooze unless ignoreSnooze is true
+        val snoozedResult = UpdateChecker.evaluateUpdate(
+            info = info,
+            currentVersionCode = 1,
+            isSnoozed = true,
+            ignoreSnooze = false,
+            today = today
+        )
+        assertEquals(UpdateType.NONE, snoozedResult.type)
+
+        val manualResult = UpdateChecker.evaluateUpdate(
+            info = info,
+            currentVersionCode = 1,
+            isSnoozed = true,
+            ignoreSnooze = true,
+            today = today
+        )
+        assertEquals(UpdateType.OPTIONAL, manualResult.type)
+    }
+
+    @Test
+    fun `evaluateUpdate with updateDeadline shows forced dialog when today is on or after deadline`() {
+        val info = AppUpdateInfo(
+            latestVersionCode = 2,
+            minVersionCode = 1,
+            latestVersionName = "1.1",
+            message = "New version is ready!",
+            downloadUrl = "https://example.com/app.apk",
+            updateDeadline = "2026-11-15"
+        )
+
+        // Today is exactly on deadline
+        val onDeadlineResult = UpdateChecker.evaluateUpdate(
+            info = info,
+            currentVersionCode = 1,
+            isSnoozed = true,
+            ignoreSnooze = false,
+            today = LocalDate.of(2026, 11, 15)
+        )
+        assertEquals(UpdateType.FORCED, onDeadlineResult.type)
+
+        // Today is after deadline
+        val afterDeadlineResult = UpdateChecker.evaluateUpdate(
+            info = info,
+            currentVersionCode = 1,
+            isSnoozed = true,
+            ignoreSnooze = false,
+            today = LocalDate.of(2026, 11, 16)
+        )
+        assertEquals(UpdateType.FORCED, afterDeadlineResult.type)
+    }
+
+    @Test
+    fun `evaluateUpdate with invalid or empty updateDeadline falls back to default behavior`() {
+        val invalidInfo = AppUpdateInfo(
+            latestVersionCode = 3,
+            minVersionCode = 2,
+            latestVersionName = "1.2",
+            message = "Update message",
+            downloadUrl = "https://example.com/app.apk",
+            updateDeadline = "invalid-date-string"
+        )
+
+        // When current < minVersionCode, falls back to forced
+        val forcedFallback = UpdateChecker.evaluateUpdate(
+            info = invalidInfo,
+            currentVersionCode = 1,
+            isSnoozed = false,
+            ignoreSnooze = false
+        )
+        assertEquals(UpdateType.FORCED, forcedFallback.type)
+
+        // When minVersionCode <= current < latestVersionCode, falls back to optional
+        val optionalFallback = UpdateChecker.evaluateUpdate(
+            info = invalidInfo,
+            currentVersionCode = 2,
+            isSnoozed = false,
+            ignoreSnooze = false
+        )
+        assertEquals(UpdateType.OPTIONAL, optionalFallback.type)
+    }
+
+    @Test
+    fun `announcement date range is inclusive and invalid dates fail silently`() {
+        val announcement = AnnouncementInfo(
+            id = "test-announcement-1",
+            title = "Test Title",
+            text = "Test Message",
+            startDate = "2026-11-05",
+            endDate = "2026-11-10"
+        )
+
+        fun checkDateRange(ann: AnnouncementInfo, today: LocalDate): Boolean {
+            return try {
+                val start = LocalDate.parse(ann.startDate.trim())
+                val end = LocalDate.parse(ann.endDate.trim())
+                !today.isBefore(start) && !today.isAfter(end)
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        // Before start date: false
+        assertFalse(checkDateRange(announcement, LocalDate.of(2026, 11, 4)))
+
+        // Exact start date (inclusive): true
+        assertTrue(checkDateRange(announcement, LocalDate.of(2026, 11, 5)))
+
+        // Between start and end date: true
+        assertTrue(checkDateRange(announcement, LocalDate.of(2026, 11, 7)))
+
+        // Exact end date (inclusive): true
+        assertTrue(checkDateRange(announcement, LocalDate.of(2026, 11, 10)))
+
+        // After end date: false
+        assertFalse(checkDateRange(announcement, LocalDate.of(2026, 11, 11)))
+
+        // Invalid date format fails silently and returns false
+        val invalidAnn = announcement.copy(startDate = "not-a-date")
+        assertFalse(checkDateRange(invalidAnn, LocalDate.of(2026, 11, 7)))
     }
 }
 

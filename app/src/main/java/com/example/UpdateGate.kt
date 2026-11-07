@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,97 +45,168 @@ fun UpdateGate() {
         UpdateChecker.checkOnLaunch(context)
     }
 
-    val updateResult = UpdateChecker.activeUpdate ?: return
-    val info = updateResult.info ?: return
-    val isForced = updateResult.type == UpdateType.FORCED
+    val updateResult = UpdateChecker.activeUpdate
+    val announcement = UpdateChecker.activeAnnouncement
+    val isForced = updateResult?.type == UpdateType.FORCED
 
     MalayalamTvTheme {
-        AlertDialog(
-            onDismissRequest = {
-                // Back press and outside tap do nothing for forced updates
-                if (!isForced) {
-                    UpdateChecker.snoozeOptionalUpdate(context)
-                    UpdateChecker.dismissDialog()
-                }
-            },
-            properties = DialogProperties(
-                dismissOnBackPress = !isForced,
-                dismissOnClickOutside = !isForced
-            ),
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.SystemUpdate,
-                    contentDescription = "Update Available",
-                    tint = AmberPrimary,
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = if (isForced) "Update Required" else "New version ${info.latestVersionName}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = TextPrimaryDark,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                Text(
-                    text = info.message,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = TextSecondaryDark,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        UpdateChecker.openDownloadUrl(context, info.downloadUrl)
-                        if (!isForced) {
-                            UpdateChecker.dismissDialog()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AmberPrimary,
-                        contentColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.testTag("update_confirm_button")
-                ) {
-                    Text(
-                        text = "Update",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+        // Render update dialog if active
+        if (updateResult != null && updateResult.info != null) {
+            val info = updateResult.info
+            AlertDialog(
+                onDismissRequest = {
+                    // Back press and outside tap do nothing for forced updates
+                    if (!isForced) {
+                        UpdateChecker.snoozeOptionalUpdate(context)
+                        UpdateChecker.dismissDialog()
+                    }
+                },
+                properties = DialogProperties(
+                    dismissOnBackPress = !isForced,
+                    dismissOnClickOutside = !isForced
+                ),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = "Update Available",
+                        tint = AmberPrimary,
+                        modifier = Modifier.size(32.dp)
                     )
-                }
-            },
-            dismissButton = if (!isForced) {
-                {
-                    TextButton(
+                },
+                title = {
+                    Text(
+                        text = if (isForced) "Update Required" else "New version ${info.latestVersionName}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimaryDark,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Text(
+                        text = info.message,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = TextSecondaryDark,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Button(
                         onClick = {
-                            UpdateChecker.snoozeOptionalUpdate(context)
-                            UpdateChecker.dismissDialog()
+                            UpdateChecker.openDownloadUrl(context, info.downloadUrl)
+                            if (!isForced) {
+                                UpdateChecker.dismissDialog()
+                            }
                         },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = TextSecondaryDark
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AmberPrimary,
+                            contentColor = Color.Black
                         ),
-                        modifier = Modifier.testTag("update_later_button")
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("update_confirm_button")
                     ) {
                         Text(
-                            text = "Later",
-                            fontWeight = FontWeight.SemiBold,
+                            text = "Update",
+                            fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
                     }
-                }
-            } else null,
-            shape = RoundedCornerShape(20.dp),
-            containerColor = DarkSurface,
-            tonalElevation = 8.dp,
-            modifier = Modifier.testTag("update_gate_dialog")
-        )
+                },
+                dismissButton = if (!isForced) {
+                    {
+                        TextButton(
+                            onClick = {
+                                UpdateChecker.snoozeOptionalUpdate(context)
+                                UpdateChecker.dismissDialog()
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = TextSecondaryDark
+                            ),
+                            modifier = Modifier.testTag("update_later_button")
+                        ) {
+                            Text(
+                                text = "Later",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                } else null,
+                shape = RoundedCornerShape(20.dp),
+                containerColor = DarkSurface,
+                tonalElevation = 8.dp,
+                modifier = Modifier.testTag("update_gate_dialog")
+            )
+        }
+
+        // Render announcement dialog if active and not blocked by a forced update
+        // If an optional update is shown, announcement will appear after optional update dialog is dismissed, or if no update
+        if (!isForced && announcement != null && (updateResult == null || updateResult.type == UpdateType.NONE)) {
+            AlertDialog(
+                onDismissRequest = {
+                    UpdateChecker.dismissAnnouncement(context)
+                },
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true
+                ),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Campaign,
+                        contentDescription = "Announcement",
+                        tint = AmberPrimary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = announcement.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimaryDark,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Text(
+                        text = announcement.text,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = TextSecondaryDark,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            UpdateChecker.dismissAnnouncement(context)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AmberPrimary,
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("announcement_ok_button")
+                    ) {
+                        Text(
+                            text = "OK",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = DarkSurface,
+                tonalElevation = 8.dp,
+                modifier = Modifier.testTag("announcement_dialog")
+            )
+        }
     }
 }
