@@ -23,6 +23,8 @@ data class UiState(
     val searchQuery: String = "",
     val isQualityDialogVisible: Boolean = false,
     val isCategoryDrawerOpen: Boolean = false,
+    val isSettingsDialogVisible: Boolean = false,
+    val isPipModeActive: Boolean = false,
     val isDarkMode: Boolean = true
 )
 
@@ -34,6 +36,10 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
     val playerState: StateFlow<PlayerState> = playerManager.playerState
     val isLoadingChannels: StateFlow<Boolean> = repository.isLoading
     val loadError: StateFlow<String?> = repository.errorMessage
+
+    val isPipEnabled = MutableStateFlow(repository.isPipEnabled())
+    val isLockScreenPlay = MutableStateFlow(repository.isLockScreenPlayEnabled())
+    val isBackgroundPlay = MutableStateFlow(repository.isBackgroundPlayEnabled())
 
     private val _uiState = MutableStateFlow(
         UiState(isDarkMode = repository.isDarkModeEnabled())
@@ -170,6 +176,30 @@ class ChannelViewModel(application: Application) : AndroidViewModel(application)
 
     fun toggleQualityDialog(show: Boolean) {
         _uiState.value = _uiState.value.copy(isQualityDialogVisible = show)
+    }
+
+    fun toggleSettingsDialog(show: Boolean? = null) {
+        val next = show ?: !_uiState.value.isSettingsDialogVisible
+        _uiState.value = _uiState.value.copy(isSettingsDialogVisible = next)
+    }
+
+    fun setPipEnabled(enabled: Boolean) {
+        repository.setPipEnabled(enabled)
+        isPipEnabled.value = enabled
+    }
+
+    fun setLockScreenPlay(enabled: Boolean) {
+        repository.setLockScreenPlayEnabled(enabled)
+        isLockScreenPlay.value = enabled
+    }
+
+    fun setBackgroundPlay(enabled: Boolean) {
+        repository.setBackgroundPlayEnabled(enabled)
+        isBackgroundPlay.value = enabled
+    }
+
+    fun setPipModeActive(active: Boolean) {
+        _uiState.value = _uiState.value.copy(isPipModeActive = active)
     }
 
     fun toggleCategoryDrawer(open: Boolean? = null) {

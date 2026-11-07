@@ -2,7 +2,10 @@ package com.example.ui
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,21 +33,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import com.example.ui.theme.AmberPrimary
 import com.example.ui.theme.MalayalamTvTheme
 
 @Composable
 fun HomeScreen(
     viewModel: ChannelViewModel,
+    onEnterPip: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -53,30 +61,35 @@ fun HomeScreen(
     val allChannels by viewModel.repository.channels.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingChannels.collectAsStateWithLifecycle()
+    val isPipEnabled by viewModel.isPipEnabled.collectAsStateWithLifecycle()
+    val isLockScreenPlay by viewModel.isLockScreenPlay.collectAsStateWithLifecycle()
+    val isBackgroundPlay by viewModel.isBackgroundPlay.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val activity = context as? Activity
 
     // Handle Fullscreen orientation and immersive system bars
-    LaunchedEffect(playerState.isFullscreen) {
-        activity?.let { act ->
-            val window = act.window
-            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-            if (playerState.isFullscreen) {
-                act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                insetsController.hide(WindowInsetsCompat.Type.systemBars())
-                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            } else {
-                act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                insetsController.show(WindowInsetsCompat.Type.systemBars())
+    LaunchedEffect(playerState.isFullscreen, uiState.isPipModeActive) {
+        if (!uiState.isPipModeActive) {
+            activity?.let { act ->
+                val window = act.window
+                val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+                if (playerState.isFullscreen) {
+                    act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    insetsController.hide(WindowInsetsCompat.Type.systemBars())
+                    insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                } else {
+                    act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    insetsController.show(WindowInsetsCompat.Type.systemBars())
+                }
             }
         }
     }
 
-    // Keep screen awake while playing to prevent device lock/sleep
-    DisposableEffect(playerState.isPlaying) {
+    // Keep screen awake while playing to prevent device lock/sleep if enabled
+    DisposableEffect(playerState.isPlaying, isLockScreenPlay) {
         val window = activity?.window
-        if (playerState.isPlaying) {
+        if (playerState.isPlaying && isLockScreenPlay) {
             window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -98,8 +111,9 @@ fun HomeScreen(
     }
 
     // Hardware Back Button Handler
-    BackHandler(enabled = playerState.isFullscreen || uiState.isCategoryDrawerOpen || uiState.searchQuery.isNotEmpty()) {
+    BackHandler(enabled = playerState.isFullscreen || uiState.isCategoryDrawerOpen || uiState.searchQuery.isNotEmpty() || uiState.isSettingsDialogVisible) {
         when {
+            uiState.isSettingsDialogVisible -> viewModel.toggleSettingsDialog(false)
             uiState.isCategoryDrawerOpen -> viewModel.toggleCategoryDrawer(false)
             playerState.isFullscreen -> viewModel.setFullscreen(false)
             uiState.searchQuery.isNotEmpty() -> viewModel.setSearchQuery("")
@@ -111,7 +125,33 @@ fun HomeScreen(
             modifier = modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            if (playerState.isFullscreen) {
+            if (uiState.isPipModeActive) {
+                // PICTURE-IN-PICTURE MINIMAL SURFACE (NO UI CONTROLS OR OVERLAYS)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                layoutParams = FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                useController = false
+                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                player = viewModel.playerManager.exoPlayer
+                                keepScreenOn = true
+                            }
+                        },
+                        update = { playerView ->
+                            playerView.player = viewModel.playerManager.exoPlayer
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else if (playerState.isFullscreen) {
                 // FULLSCREEN MODE
                 Box(modifier = Modifier.fillMaxSize()) {
                     VideoPlayerView(
@@ -123,7 +163,10 @@ fun HomeScreen(
                         onNextChannel = { viewModel.selectNextChannel() },
                         onOpenQualityPicker = { viewModel.toggleQualityDialog(true) },
                         onToggleSideBar = { viewModel.toggleCategoryDrawer() },
+                        onOpenSettings = { viewModel.toggleSettingsDialog(true) },
+                        onEnterPip = onEnterPip,
                         isSideBarOpen = uiState.isCategoryDrawerOpen,
+                        isLockScreenPlay = isLockScreenPlay,
                         modifier = Modifier.fillMaxSize()
                     )
 
@@ -156,7 +199,7 @@ fun HomeScreen(
                             .padding(innerPadding)
                     ) {
                         Column(modifier = Modifier.fillMaxSize()) {
-                            // Embedded Player (16:9 Aspect Ratio) with Side Bar toggle button
+                            // Embedded Player (16:9 Aspect Ratio)
                             VideoPlayerView(
                                 playerManager = viewModel.playerManager,
                                 playerState = playerState,
@@ -166,19 +209,23 @@ fun HomeScreen(
                                 onNextChannel = { viewModel.selectNextChannel() },
                                 onOpenQualityPicker = { viewModel.toggleQualityDialog(true) },
                                 onToggleSideBar = {},
+                                onOpenSettings = { viewModel.toggleSettingsDialog(true) },
+                                onEnterPip = onEnterPip,
                                 isSideBarOpen = false,
+                                isLockScreenPlay = isLockScreenPlay,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(16f / 9f)
                             )
 
-                            // Top Controls: Search, Refresh, Theme Toggle
+                            // Top Controls: Search, Refresh, Brightness/Theme, Settings
                             TopSearchBar(
                                 query = uiState.searchQuery,
                                 onQueryChanged = { viewModel.setSearchQuery(it) },
                                 isDarkMode = uiState.isDarkMode,
                                 onToggleDarkMode = { viewModel.toggleDarkMode() },
-                                onRefresh = { viewModel.loadChannels(forceRefresh = true) }
+                                onRefresh = { viewModel.loadChannels(forceRefresh = true) },
+                                onOpenSettings = { viewModel.toggleSettingsDialog(true) }
                             )
 
                             // Category Filter Pill Strip
@@ -264,6 +311,22 @@ fun HomeScreen(
                     },
                     onDismissRequest = {
                         viewModel.toggleQualityDialog(false)
+                    }
+                )
+            }
+
+            // Settings Dialog
+            if (uiState.isSettingsDialogVisible) {
+                SettingsDialog(
+                    isPipEnabled = isPipEnabled,
+                    onTogglePip = { viewModel.setPipEnabled(it) },
+                    isLockScreenPlay = isLockScreenPlay,
+                    onToggleLockScreenPlay = { viewModel.setLockScreenPlay(it) },
+                    isBackgroundPlay = isBackgroundPlay,
+                    onToggleBackgroundPlay = { viewModel.setBackgroundPlay(it) },
+                    onEnterPipNow = onEnterPip,
+                    onDismissRequest = {
+                        viewModel.toggleSettingsDialog(false)
                     }
                 )
             }

@@ -39,6 +39,9 @@ class ChannelRepository(private val context: Context) {
         private const val PREF_FAVORITES_KEY = "key_favorite_channel_ids"
         private const val PREF_CACHED_M3U = "key_cached_m3u_content"
         private const val PREF_DARK_MODE = "key_dark_mode_enabled"
+        private const val PREF_PIP_ENABLED = "key_pip_enabled"
+        private const val PREF_LOCK_SCREEN_PLAY = "key_lock_screen_play"
+        private const val PREF_BACKGROUND_PLAY = "key_background_play"
     }
 
     suspend fun loadChannels(forceRefresh: Boolean = false) {
@@ -151,6 +154,15 @@ class ChannelRepository(private val context: Context) {
     fun setDarkModeEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(PREF_DARK_MODE, enabled).apply()
     }
+
+    fun isPipEnabled(): Boolean = prefs.getBoolean(PREF_PIP_ENABLED, true)
+    fun setPipEnabled(enabled: Boolean) = prefs.edit().putBoolean(PREF_PIP_ENABLED, enabled).apply()
+
+    fun isLockScreenPlayEnabled(): Boolean = prefs.getBoolean(PREF_LOCK_SCREEN_PLAY, true)
+    fun setLockScreenPlayEnabled(enabled: Boolean) = prefs.edit().putBoolean(PREF_LOCK_SCREEN_PLAY, enabled).apply()
+
+    fun isBackgroundPlayEnabled(): Boolean = prefs.getBoolean(PREF_BACKGROUND_PLAY, true)
+    fun setBackgroundPlayEnabled(enabled: Boolean) = prefs.edit().putBoolean(PREF_BACKGROUND_PLAY, enabled).apply()
 
     private fun loadFavorites(): Set<String> {
         return prefs.getStringSet(PREF_FAVORITES_KEY, emptySet()) ?: emptySet()

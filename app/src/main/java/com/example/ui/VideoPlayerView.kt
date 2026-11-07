@@ -33,8 +33,10 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Tv
@@ -93,16 +95,19 @@ fun VideoPlayerView(
     onNextChannel: () -> Unit,
     onOpenQualityPicker: () -> Unit,
     onToggleSideBar: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+    onEnterPip: () -> Unit = {},
     isSideBarOpen: Boolean = false,
+    isLockScreenPlay: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var areControlsVisible by remember { mutableStateOf(true) }
 
-    // Keep screen awake while playing to prevent device lock/sleep
-    DisposableEffect(playerState.isPlaying) {
+    // Keep screen awake while playing to prevent device lock/sleep if lock screen play is enabled
+    DisposableEffect(playerState.isPlaying, isLockScreenPlay) {
         val window = (context as? Activity)?.window
-        if (playerState.isPlaying) {
+        if (playerState.isPlaying && isLockScreenPlay) {
             window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -148,13 +153,13 @@ fun VideoPlayerView(
                     useController = false
                     this.resizeMode = resizeModeInt
                     player = playerManager.exoPlayer
-                    keepScreenOn = playerState.isPlaying
+                    keepScreenOn = playerState.isPlaying && isLockScreenPlay
                 }
             },
             update = { playerView ->
                 playerView.player = playerManager.exoPlayer
                 playerView.resizeMode = resizeModeInt
-                playerView.keepScreenOn = playerState.isPlaying
+                playerView.keepScreenOn = playerState.isPlaying && isLockScreenPlay
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -374,6 +379,23 @@ fun VideoPlayerView(
                                 )
                             }
                         }
+
+                        // Settings Button in Top HUD
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.4f))
+                                .testTag("player_top_settings_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = AmberPrimary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                 }
 
@@ -513,7 +535,7 @@ fun VideoPlayerView(
                         }
                     }
 
-                    // Controls Row: Sound Mute + Video Quality + Aspect Ratio + Fullscreen
+                    // Controls Row: Sound Mute + Video Quality + Aspect Ratio + PiP + Settings + Fullscreen
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -569,11 +591,43 @@ fun VideoPlayerView(
                             }
                         }
 
-                        // Right Section: Aspect Ratio + Fullscreen Toggle
+                        // Right Section: PiP + Settings + Aspect Ratio + Fullscreen Toggle
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // Picture in Picture Button
+                            IconButton(
+                                onClick = onEnterPip,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.4f))
+                                    .testTag("player_pip_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PictureInPictureAlt,
+                                    contentDescription = "Picture in Picture",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+
+                            // Settings Button
+                            IconButton(
+                                onClick = onOpenSettings,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.4f))
+                                    .testTag("player_settings_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
+                                    tint = AmberPrimary,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+
                             // Aspect Ratio Mode (Fit / Fill / Stretch)
                             Surface(
                                 shape = RoundedCornerShape(8.dp),

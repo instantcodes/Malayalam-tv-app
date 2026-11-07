@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.TvOff
 import androidx.compose.material3.Button
@@ -70,6 +71,7 @@ fun TopSearchBar(
     isDarkMode: Boolean,
     onToggleDarkMode: () -> Unit,
     onRefresh: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -149,7 +151,7 @@ fun TopSearchBar(
             )
         }
 
-        // Dark/Light Mode Toggle Button
+        // Dark/Light (Brightness) Mode Toggle Button
         IconButton(
             onClick = onToggleDarkMode,
             modifier = Modifier
@@ -161,6 +163,22 @@ fun TopSearchBar(
             Icon(
                 imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                 contentDescription = if (isDarkMode) "Switch to Light Mode" else "Switch to Dark Mode",
+                tint = AmberPrimary
+            )
+        }
+
+        // Settings Button near Brightness/Theme
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .testTag("top_bar_settings_button")
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
                 tint = AmberPrimary
             )
         }
